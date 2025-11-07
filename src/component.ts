@@ -13,20 +13,28 @@ export class MarkdownEditorComponent extends HTMLElement {
   private saveTimeout: any = null;
   private lastSavedContent: string = '';
   private saveIndicator: HTMLElement | null = null;
+  private shadow: ShadowRoot;
+
+  // Declare which attributes to observe
+  static get observedAttributes() {
+    return ['content', 'placeholder', 'autosave', 'tableid', 'rowid', 'fieldid', 'savedelay'];
+  }
 
   constructor() {
     super();
+    // Create Shadow DOM for better encapsulation
+    this.shadow = this.attachShadow({ mode: 'open' });
   }
 
   async connectedCallback() {
     try {
-      // Get properties
-      const content = zySdk.services.component.getPropertyValue(this, 'content');
-      const placeholder = zySdk.services.component.getPropertyValue(this, 'placeholder') || 'Start typing...';
-      const autosave = zySdk.services.component.getPropertyValue(this, 'autosave');
-      const tableId = zySdk.services.component.getPropertyValue(this, 'tableid');
-      const rowId = zySdk.services.component.getPropertyValue(this, 'rowid');
-      const fieldId = zySdk.services.component.getPropertyValue(this, 'fieldid');
+      // Get properties from HTML attributes
+      const content = this.getAttribute('content') || '';
+      const placeholder = this.getAttribute('placeholder') || 'Start typing...';
+      const autosave = this.getAttribute('autosave') === 'true';
+      const tableId = this.getAttribute('tableid') || '';
+      const rowId = this.getAttribute('rowid') || '';
+      const fieldId = this.getAttribute('fieldid') || 'content';
 
       // Load content from database if table and row are specified
       let initialContent = content;
@@ -43,8 +51,11 @@ export class MarkdownEditorComponent extends HTMLElement {
         }
       }
 
-      // Create editor container
-      this.innerHTML = `
+      // Create editor container in Shadow DOM
+      this.shadow.innerHTML = `
+        <style>
+          ${this.getStyles()}
+        </style>
         <div class="markdown-editor-container">
           <div class="markdown-editor-toolbar" id="toolbar"></div>
           <div class="markdown-editor-content" id="editor"></div>
@@ -54,10 +65,10 @@ export class MarkdownEditorComponent extends HTMLElement {
         </div>
       `;
 
-      this.saveIndicator = this.querySelector('#save-indicator');
+      this.saveIndicator = this.shadow.querySelector('#save-indicator');
 
       // Initialize TipTap editor
-      const editorElement = this.querySelector('#editor') as HTMLElement;
+      const editorElement = this.shadow.querySelector('#editor') as HTMLElement;
 
       this.editor = new Editor({
         element: editorElement,
@@ -111,8 +122,17 @@ export class MarkdownEditorComponent extends HTMLElement {
     }
   }
 
+  attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+    // Handle attribute changes if needed
+    // For now, we'll mainly handle initial setup in connectedCallback
+    if (oldValue !== newValue && this.editor) {
+      // Could implement live updates here if needed
+      console.log(`Attribute ${name} changed from ${oldValue} to ${newValue}`);
+    }
+  }
+
   private createToolbar() {
-    const toolbar = this.querySelector('#toolbar');
+    const toolbar = this.shadow.querySelector('#toolbar');
     if (!toolbar || !this.editor) return;
 
     const buttons = [
@@ -179,7 +199,7 @@ export class MarkdownEditorComponent extends HTMLElement {
   }
 
   private updateToolbarState() {
-    const toolbar = this.querySelector('#toolbar');
+    const toolbar = this.shadow.querySelector('#toolbar');
     if (!toolbar) return;
 
     const buttons = toolbar.querySelectorAll('.toolbar-button');
@@ -240,8 +260,8 @@ export class MarkdownEditorComponent extends HTMLElement {
       clearTimeout(this.saveTimeout);
     }
 
-    // Get save delay
-    const saveDelay = zySdk.services.component.getPropertyValue(this, 'savedelay') || 1000;
+    // Get save delay from attribute
+    const saveDelay = parseInt(this.getAttribute('savedelay') || '1000', 10);
 
     // Set new timeout
     this.saveTimeout = setTimeout(() => {
@@ -268,9 +288,9 @@ export class MarkdownEditorComponent extends HTMLElement {
     }
 
     try {
-      const tableId = zySdk.services.component.getPropertyValue(this, 'tableid');
-      const rowId = zySdk.services.component.getPropertyValue(this, 'rowid');
-      const fieldId = zySdk.services.component.getPropertyValue(this, 'fieldid') || 'content';
+      const tableId = this.getAttribute('tableid') || '';
+      const rowId = this.getAttribute('rowid') || '';
+      const fieldId = this.getAttribute('fieldid') || 'content';
 
       if (!tableId) {
         console.warn('No table ID specified, content not saved');
@@ -287,11 +307,8 @@ export class MarkdownEditorComponent extends HTMLElement {
       } else {
         // Create new row
         const newRow = await zySdk.services.storage.createRow(tableId, data);
-        // Update the rowid property with the new row ID
-        zySdk.services.dictionary.setValue(
-          zySdk.services.component.getPropertyValue(this, 'rowid'),
-          newRow.id
-        );
+        // Update the rowid attribute with the new row ID
+        this.setAttribute('rowid', newRow.id);
       }
 
       this.lastSavedContent = content;
@@ -336,5 +353,191 @@ export class MarkdownEditorComponent extends HTMLElement {
   // Public method to set content
   public setContent(content: string) {
     this.editor?.commands.setContent(content);
+  }
+
+  // Get CSS styles as string for Shadow DOM
+  private getStyles(): string {
+    return `
+      .markdown-editor-container {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .markdown-editor-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+
+      .toolbar-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .toolbar-button:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+      }
+
+      .toolbar-button:active {
+        background: #e5e7eb;
+      }
+
+      .toolbar-button.active {
+        background: #3b82f6;
+        border-color: #2563eb;
+        color: #ffffff;
+      }
+
+      .toolbar-button.active svg {
+        fill: #ffffff;
+      }
+
+      .toolbar-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .toolbar-button svg {
+        width: 18px;
+        height: 18px;
+        fill: #374151;
+      }
+
+      .toolbar-separator {
+        width: 1px;
+        height: 32px;
+        background: #d1d5db;
+        margin: 0 4px;
+      }
+
+      .markdown-editor-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+      }
+
+      .markdown-editor-content .ProseMirror {
+        outline: none;
+        min-height: 200px;
+      }
+
+      .markdown-editor-content .ProseMirror p {
+        margin: 0 0 1em 0;
+      }
+
+      .markdown-editor-content .ProseMirror h1 {
+        font-size: 2em;
+        font-weight: bold;
+        margin: 0.67em 0;
+      }
+
+      .markdown-editor-content .ProseMirror h2 {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin: 0.75em 0;
+      }
+
+      .markdown-editor-content .ProseMirror h3 {
+        font-size: 1.17em;
+        font-weight: bold;
+        margin: 0.83em 0;
+      }
+
+      .markdown-editor-content .ProseMirror ul,
+      .markdown-editor-content .ProseMirror ol {
+        padding-left: 2em;
+        margin: 1em 0;
+      }
+
+      .markdown-editor-content .ProseMirror li {
+        margin: 0.5em 0;
+      }
+
+      .markdown-editor-content .ProseMirror blockquote {
+        border-left: 4px solid #d1d5db;
+        padding-left: 1em;
+        margin: 1em 0;
+        color: #6b7280;
+      }
+
+      .markdown-editor-content .ProseMirror code {
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.9em;
+      }
+
+      .markdown-editor-content .ProseMirror a {
+        color: #3b82f6;
+        text-decoration: underline;
+      }
+
+      .markdown-editor-content .ProseMirror a:hover {
+        color: #2563eb;
+      }
+
+      .markdown-editor-content .ProseMirror strong {
+        font-weight: bold;
+      }
+
+      .markdown-editor-content .ProseMirror em {
+        font-style: italic;
+      }
+
+      .markdown-editor-content .ProseMirror s {
+        text-decoration: line-through;
+      }
+
+      .markdown-editor-footer {
+        padding: 8px 16px;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+        display: flex;
+        justify-content: flex-end;
+        min-height: 32px;
+      }
+
+      .save-indicator {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .save-indicator.saving {
+        color: #f59e0b;
+      }
+
+      .save-indicator.saved {
+        color: #10b981;
+      }
+
+      .save-indicator.error {
+        color: #ef4444;
+      }
+
+      .error {
+        padding: 16px;
+        color: #ef4444;
+        text-align: center;
+      }
+    `;
   }
 }

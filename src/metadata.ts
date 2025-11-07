@@ -6,58 +6,50 @@ export const MarkdownEditorMetadata = {
   icon: componentIcon,
   label: 'Markdown Editor',
   category: 'Forms',
-  subcategory: 'Input',
 
   properties: [
     {
       id: 'content',
       name: 'Initial Content',
-      type: 'text',
-      tooltip: 'Initial HTML content to display in the editor',
+      type: 'long-text' as const,
       default: '',
       main: true
     },
     {
       id: 'tableid',
       name: 'Table ID',
-      type: 'text',
-      tooltip: 'ID of the table to store the content',
+      type: 'table' as const,
       default: ''
     },
     {
       id: 'rowid',
       name: 'Row ID',
-      type: 'text',
-      tooltip: 'ID of the row to update (leave empty to create new row)',
+      type: 'row-variable' as const,
       default: ''
     },
     {
       id: 'fieldid',
       name: 'Field ID',
-      type: 'text',
-      tooltip: 'ID of the field/column to save the content to',
+      type: 'column' as const,
       default: 'content'
     },
     {
       id: 'placeholder',
       name: 'Placeholder',
-      type: 'text',
-      tooltip: 'Placeholder text when editor is empty',
+      type: 'text' as const,
       default: 'Start typing...'
     },
     {
       id: 'autosave',
       name: 'Auto-save',
-      type: 'boolean',
-      tooltip: 'Automatically save changes to database',
-      default: true
+      type: 'boolean' as const,
+      default: true as any
     },
     {
       id: 'savedelay',
       name: 'Save Delay (ms)',
-      type: 'number',
-      tooltip: 'Delay in milliseconds before auto-saving (debounce)',
-      default: 1000
+      type: 'number' as const,
+      default: 1000 as any
     }
   ],
 
