@@ -1,10 +1,9 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # Build output
-dist/
+# dist/ is needed for GitHub Pages deployment
 
 # Logs
 *.log
