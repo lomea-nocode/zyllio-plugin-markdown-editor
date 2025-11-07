@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Markdown Editor Plugin</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .info {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      border-left: 4px solid #2196f3;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #2196f3;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #1976d2;
+    }
+    button.secondary {
+      background: #757575;
+    }
+    button.secondary:hover {
+      background: #616161;
+    }
+    .output {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    .output h3 {
+      margin-top: 0;
+      color: #666;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    .output pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 12px;
+      color: #333;
+      margin: 0;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      border-left: 4px solid #c62828;
+    }
+    .warning {
+      background: #fff3e0;
+      color: #e65100;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      border-left: 4px solid #ff9800;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test Markdown Editor Plugin</h1>
+
+  <div class="info">
+    <strong>📋 Instructions :</strong>
+    <ol>
+      <li>Assurez-vous d'avoir buildé le plugin : <code>npm run build</code></li>
+      <li>Cette page simule l'environnement Zyllio pour tester le composant</li>
+      <li>Le composant devrait s'afficher ci-dessous avec sa toolbar</li>
+    </ol>
+  </div>
+
+  <div class="warning">
+    ⚠️ <strong>Note :</strong> Cette page ne peut pas tester la sauvegarde dans la base de données Zyllio.
+    Pour tester la persistance, utilisez Zyllio Studio directement.
+  </div>
+
+  <div class="container">
+    <h2>Éditeur</h2>
+
+    <!-- Le composant sera inséré ici -->
+    <div id="editor-container" style="margin-top: 20px;">
+      <markdown-editor id="test-editor"></markdown-editor>
+    </div>
+
+    <div class="controls">
+      <button onclick="getContent()">📄 Obtenir le contenu HTML</button>
+      <button onclick="setContent()" class="secondary">📝 Définir du contenu test</button>
+      <button onclick="clearContent()" class="secondary">🗑️ Vider l'éditeur</button>
+    </div>
+
+    <div id="output" class="output" style="display: none;">
+      <h3>Contenu HTML de l'éditeur :</h3>
+      <pre id="output-content"></pre>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+  </div>
+
+  <!-- Mock Zyllio SDK -->
+  <script>
+    // Simuler l'API Zyllio pour que le composant puisse se charger
+    window.zySdk = {
+      services: {
+        registry: {
+          registerComponent: function(metadata, component) {
+            console.log('✅ Composant enregistré:', metadata.id);
+            console.log('Metadata:', metadata);
+
+            // Définir le custom element
+            if (!customElements.get('markdown-editor')) {
+              customElements.define('markdown-editor', component);
+              console.log('✅ Custom element défini');
+            }
+          }
+        },
+        component: {
+          getPropertyValue: function(element, property) {
+            console.log('🔍 getPropertyValue:', property);
+            // Retourner des valeurs par défaut pour les tests
+            const defaults = {
+              content: '<p>Commencez à taper ici...</p>',
+              tableid: '',
+              rowid: '',
+              fieldid: 'content',
+              placeholder: 'Test de l\'éditeur...',
+              autosave: false, // Désactiver l'auto-save en test standalone
+              savedelay: 1000
+            };
+            return defaults[property] || '';
+          }
+        },
+        dictionary: {
+          getValue: function(value) {
+            console.log('🔍 getValue:', value);
+            return value;
+          },
+          setValue: function(property, value) {
+            console.log('💾 setValue:', property, value);
+          },
+          onChange: function(property, callback) {
+            console.log('👂 onChange listener added for:', property);
+            return () => console.log('🔇 onChange listener removed');
+          }
+        },
+        storage: {
+          createRow: async function(tableId, data) {
+            console.log('➕ createRow:', tableId, data);
+            return { id: 'test-' + Date.now() };
+          },
+          updateRow: async function(tableId, rowId, data) {
+            console.log('✏️ updateRow:', tableId, rowId, data);
+          },
+          deleteRow: async function(tableId, rowId) {
+            console.log('🗑️ deleteRow:', tableId, rowId);
+          },
+          retrieveRows: async function(tableId) {
+            console.log('📥 retrieveRows:', tableId);
+            return [];
+          }
+        },
+        dialog: {
+          show: async function(options) {
+            console.log('💬 dialog.show:', options);
+            alert(options.title + '\n\n' + options.text);
+          }
+        },
+        loading: {
+          show: function() {
+            console.log('⏳ loading.show');
+          },
+          hide: function() {
+            console.log('✅ loading.hide');
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Charger le plugin -->
+  <script src="dist/plugin.js"></script>
+
+  <script>
+    // Fonctions de test
+    function getContent() {
+      const editor = document.getElementById('test-editor');
+
+      if (editor && typeof editor.getContent === 'function') {
+        const content = editor.getContent();
+        document.getElementById('output-content').textContent = content;
+        document.getElementById('output').style.display = 'block';
+        document.getElementById('error').style.display = 'none';
+        console.log('📄 Contenu:', content);
+      } else {
+        showError('Erreur : La méthode getContent() n\'est pas disponible');
+      }
+    }
+
+    function setContent() {
+      const editor = document.getElementById('test-editor');
+
+      const testContent = `
+        <h1>Titre de Test</h1>
+        <p>Ceci est un <strong>paragraphe de test</strong> avec du <em>formatage</em>.</p>
+        <h2>Sous-titre</h2>
+        <ul>
+          <li>Élément de liste 1</li>
+          <li>Élément de liste 2</li>
+          <li>Élément de liste 3</li>
+        </ul>
+        <blockquote>
+          <p>Une citation inspirante pour tester les blockquotes.</p>
+        </blockquote>
+        <p>Un lien : <a href="https://www.zyllio.com">Zyllio</a></p>
+      `;
+
+      if (editor && typeof editor.setContent === 'function') {
+        editor.setContent(testContent);
+        document.getElementById('error').style.display = 'none';
+        console.log('✅ Contenu défini');
+      } else {
+        showError('Erreur : La méthode setContent() n\'est pas disponible');
+      }
+    }
+
+    function clearContent() {
+      const editor = document.getElementById('test-editor');
+
+      if (editor && typeof editor.setContent === 'function') {
+        editor.setContent('');
+        document.getElementById('output').style.display = 'none';
+        document.getElementById('error').style.display = 'none';
+        console.log('🗑️ Éditeur vidé');
+      } else {
+        showError('Erreur : La méthode setContent() n\'est pas disponible');
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('error').textContent = message;
+      document.getElementById('error').style.display = 'block';
+      console.error('❌', message);
+    }
+
+    // Vérifier que le plugin est chargé
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const editor = document.getElementById('test-editor');
+        if (editor && editor.shadowRoot) {
+          console.log('✅ Composant chargé et shadowRoot présent');
+        } else if (editor) {
+          console.log('✅ Composant chargé (sans shadowRoot)');
+        } else {
+          showError('❌ Le composant n\'a pas pu être chargé. Vérifiez que dist/plugin.js existe.');
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
